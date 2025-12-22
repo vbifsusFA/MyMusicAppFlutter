@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/auth_screen.dart';
 import 'screens/player_screen.dart';
 import 'providers/auth_provider.dart';
 
@@ -16,21 +15,9 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Music App',
         theme: ThemeData(primarySwatch: Colors.blue),
-        home: AuthWrapper(),
+        home: PlayerScreen(),
       ),
     );
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
-
-    if (auth.isAuthenticated) {
-      return PlayerScreen();
-    } else {
-      return AuthScreen();
-    }
-  }
-}
