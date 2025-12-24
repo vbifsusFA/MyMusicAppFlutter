@@ -11,7 +11,7 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  final AudioPlayer player = AudioPlayer();
+  late AudioPlayer player;
   List<Track> tracks = [];
   int currentIndex = -1;
 
@@ -28,6 +28,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    player = AudioPlayer();
     _initTracks();
   }
 
