@@ -29,6 +29,28 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     player = AudioPlayer();
+
+    // Add player state listeners for better UX
+    player.playerStateStream.listen((playerState) {
+      // Update UI when player state changes
+      setState(() {});
+
+      // Handle track completion to play next track automatically
+      if (playerState.processingState == ProcessingState.completed) {
+        // Move to next track when current track finishes
+        if (currentIndex < tracks.length - 1) {
+          _loadTrack(currentIndex + 1);
+          player.play();
+        }
+      }
+    });
+
+    // Listen to position changes for timeline updates
+    player.positionStream.listen((position) {
+      // The position is already accessible via player.position
+      // setState is called when needed by the UI components
+    });
+
     _initTracks();
   }
 
@@ -40,6 +62,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _loadTrack(int index) async {
     if (index >= 0 && index < tracks.length) {
       try {
+        // Stop current playback before loading new track
+        await player.stop();
         await player.setUrl(tracks[index].url);
         setState(() {
           currentIndex = index;
@@ -52,13 +76,35 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
 
   void _addTracks(List<Track> newTracks) {
+    int previousTracksCount = tracks.length;
     setState(() {
       tracks.addAll(newTracks);
     });
+
+    // If this is the first track added, automatically load and play it
+    if (tracks.isNotEmpty && currentIndex == -1) {
+      _loadTrack(0);
+      // Auto-play the first track added
+      Future.delayed(Duration(milliseconds: 100), () {
+        player.play();
+      });
+    } else if (previousTracksCount > 0) {
+      // If tracks already existed, play the newly added track (the last one in the list)
+      int newTrackIndex = tracks.length - 1;
+      _loadTrack(newTrackIndex);
+      // Auto-play the newly added track
+      Future.delayed(Duration(milliseconds: 100), () {
+        player.play();
+      });
+    }
   }
 
   void _selectTrack(int index) {
     _loadTrack(index);
+    // Auto-play the selected track
+    Future.delayed(Duration(milliseconds: 100), () {
+      player.play();
+    });
   }
 
   @override
