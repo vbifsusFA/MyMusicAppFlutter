@@ -1,99 +1,85 @@
 import 'package:flutter/material.dart';
-import 'button.dart';
 import 'timeline.dart';
 import 'volume.dart';
 
-class BottomPlayer extends StatefulWidget {
-  final String? playButtonImageUrl;
-  final String? pauseButtonImageUrl;
-  final String? nextButtonImageUrl;
-  final String? prevButtonImageUrl;
+class BottomPlayer extends StatelessWidget {
+  final bool isPlaying; // Теперь передаем состояние напрямую
   final VoidCallback? onPlayPressed;
-  final VoidCallback? onPausePressed;
   final VoidCallback? onNextPressed;
   final VoidCallback? onPrevPressed;
   final ValueChanged<double>? onPositionChanged;
-  final double? volume;
+  final double volume;
   final ValueChanged<double>? onVolumeChanged;
-  final double? position;
-  final double? duration;
+  final double position;
+  final double duration;
 
   const BottomPlayer({
     Key? key,
-    this.playButtonImageUrl,
-    this.pauseButtonImageUrl,
-    this.nextButtonImageUrl,
-    this.prevButtonImageUrl,
+    required this.isPlaying,
     this.onPlayPressed,
-    this.onPausePressed,
     this.onNextPressed,
     this.onPrevPressed,
     this.onPositionChanged,
-    this.volume,
+    required this.volume,
     this.onVolumeChanged,
-    this.position,
-    this.duration,
+    required this.position,
+    required this.duration,
   }) : super(key: key);
 
   @override
-  _BottomPlayerState createState() => _BottomPlayerState();
-}
-
-class _BottomPlayerState extends State<BottomPlayer> {
-  @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      height: 100, // Немного увеличим для удобства
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
       decoration: BoxDecoration(
-        color: Colors.grey[800],
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
+        color: Colors.grey[900], // Сделаем чуть темнее
+        boxShadow: [
+          BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, -2)),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Previous button
-          PlayerButton(
-            imageUrl: widget.prevButtonImageUrl,
-            onPressed: widget.onPrevPressed,
-            size: 30,
-          ),
-          // Play/Pause button
-          PlayerButton(
-            imageUrl: widget.playButtonImageUrl,
-            onPressed: widget.onPlayPressed,
-            size: 48,
-          ),
-          // Next button
-          PlayerButton(
-            imageUrl: widget.nextButtonImageUrl,
-            onPressed: widget.onNextPressed,
-            size: 30,
-          ),
-          // Timeline
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Timeline(
-                position: widget.position ?? 0.0,
-                duration: widget.duration ?? 100.0,
-                onChanged: widget.onPositionChanged,
+          Row(
+            children: [
+              // Кнопка Назад
+              IconButton(
+                icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 32),
+                onPressed: onPrevPressed,
               ),
-            ),
-          ),
-          // Volume control
-          SizedBox(
-            width: 80,
-            child: VolumeControl(
-              volume: widget.volume ?? 0.5,
-              onChanged: widget.onVolumeChanged,
-            ),
+              // Кнопка Плей / Пауза
+              IconButton(
+                icon: Icon(
+                  isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
+                  color: Colors.blueAccent,
+                  size: 48,
+                ),
+                onPressed: onPlayPressed,
+              ),
+              // Кнопка Вперед
+              IconButton(
+                icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 32),
+                onPressed: onNextPressed,
+              ),
+              
+              // Ползунок трека (Timeline)
+              Expanded(
+                child: Timeline(
+                  position: position,
+                  duration: duration,
+                  onChanged: onPositionChanged,
+                ),
+              ),
+              
+              // Громкость (Volume)
+              SizedBox(
+                width: 100,
+                child: VolumeControl(
+                  volume: volume,
+                  onChanged: onVolumeChanged,
+                ),
+              ),
+            ],
           ),
         ],
       ),
