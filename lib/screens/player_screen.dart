@@ -15,96 +15,74 @@ class _PlayerScreenState extends State<PlayerScreen> {
   List<Track> tracks = [];
   int currentIndex = -1;
 
-  // Example image URLs for buttons
-  static const String playButtonUrl =
-      'https://cdn-icons-png.flaticon.com/512/864/864839.png';
-  static const String pauseButtonUrl =
-      'https://cdn-icons-png.flaticon.com/512/767/767631.png';
-  static const String nextButtonUrl =
-      'https://cdn-icons-png.flaticon.com/512/864/864807.png';
-  static const String prevButtonUrl =
-      'https://cdn-icons-png.flaticon.com/512/864/864825.png';
+  // Локальные переменные для плавной работы ползунков
+  double? _dragPosition;
+  double _volume = 0.5;
+
+  static const String playButtonUrl = 'https://cdn-icons-png.flaticon.com/512/864/864839.png';
+  static const String pauseButtonUrl = 'https://cdn-icons-png.flaticon.com/512/767/767631.png';
+  static const String nextButtonUrl = 'https://cdn-icons-png.flaticon.com/512/864/864807.png';
+  static const String prevButtonUrl = 'https://cdn-icons-png.flaticon.com/512/864/864825.png';
 
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
+    player.setVolume(_volume);
 
-    // Add player state listeners for better UX
-    player.playerStateStream.listen((playerState) {
-      // Update UI when player state changes
-      setState(() {});
-
-      // Handle track completion to play next track automatically
-      if (playerState.processingState == ProcessingState.completed) {
-        // Move to next track when current track finishes
-        if (currentIndex < tracks.length - 1) {
-          _loadTrack(currentIndex + 1);
-          player.play();
-        }
+    // Слушаем изменение состояния (для кнопки Пауза/Плей)
+    player.playerStateStream.listen((state) {
+      if (mounted) setState(() {});
+      if (state.processingState == ProcessingState.completed) {
+        _nextTrack();
       }
     });
 
-    // Listen to position changes for timeline updates
-    player.positionStream.listen((position) {
-      // The position is already accessible via player.position
-      // setState is called when needed by the UI components
+    // Слушаем позицию трека
+    player.positionStream.listen((pos) {
+      if (mounted) setState(() {});
     });
 
-    _initTracks();
-  }
-
-  Future<void> _initTracks() async {
-    tracks = [];
-    currentIndex = -1;
+    // Слушаем длительность
+    player.durationStream.listen((dur) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _loadTrack(int index) async {
     if (index >= 0 && index < tracks.length) {
       try {
-        // Stop current playback before loading new track
         await player.stop();
         await player.setUrl(tracks[index].url);
         setState(() {
           currentIndex = index;
         });
+        player.play();
       } catch (e) {
-        print('Ошибка загрузки трека: $e');
+        debugPrint('Ошибка загрузки: $e');
       }
     }
   }
 
-
-  void _addTracks(List<Track> newTracks) {
-    int previousTracksCount = tracks.length;
-    setState(() {
-      tracks.addAll(newTracks);
-    });
-
-    // If this is the first track added, automatically load and play it
-    if (tracks.isNotEmpty && currentIndex == -1) {
-      _loadTrack(0);
-      // Auto-play the first track added
-      Future.delayed(Duration(milliseconds: 100), () {
-        player.play();
-      });
-    } else if (previousTracksCount > 0) {
-      // If tracks already existed, play the newly added track (the last one in the list)
-      int newTrackIndex = tracks.length - 1;
-      _loadTrack(newTrackIndex);
-      // Auto-play the newly added track
-      Future.delayed(Duration(milliseconds: 100), () {
-        player.play();
-      });
+  void _nextTrack() {
+    if (currentIndex < tracks.length - 1) {
+      _loadTrack(currentIndex + 1);
     }
   }
 
-  void _selectTrack(int index) {
-    _loadTrack(index);
-    // Auto-play the selected track
-    Future.delayed(Duration(milliseconds: 100), () {
-      player.play();
+  void _prevTrack() {
+    if (currentIndex > 0) {
+      _loadTrack(currentIndex - 1);
+    }
+  }
+
+  void _addTracks(List<Track> newTracks) {
+    setState(() {
+      tracks.addAll(newTracks);
     });
+    if (tracks.isNotEmpty && currentIndex == -1) {
+      _loadTrack(0);
+    }
   }
 
   @override
@@ -115,53 +93,74 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Вычисляем, какую позицию показывать: ту, что тянет палец, или реальную из плеера
+    final duration = player.duration?.inSeconds.toDouble() ?? 0.0;
+    final position = _dragPosition ?? player.position.inSeconds.toDouble();
     return Scaffold(
-      appBar: AppBar(title: Text('Музыкальный плеер')),
+      appBar: AppBar(title: const Text('Музыкальный плеер')),
       body: Column(
         children: [
           Expanded(
             child: TrackList(
               tracks: tracks,
               currentTrackIndex: currentIndex,
-              onTrackSelected: _selectTrack,
+              onTrackSelected: (index) => _loadTrack(index),
               showAddButton: tracks.isEmpty,
             ),
           ),
         ],
       ),
-      // Add the bottom player with image URLs and functions
       bottomNavigationBar: BottomPlayer(
-        playButtonImageUrl: playButtonUrl,
+        // Иконка меняется мгновенно в зависимости от состояния player.playing
+        playButtonImageUrl: player.playing ? pauseButtonUrl : playButtonUrl,
         pauseButtonImageUrl: pauseButtonUrl,
         nextButtonImageUrl: nextButtonUrl,
         prevButtonImageUrl: prevButtonUrl,
+        
         onPlayPressed: () {
-          player.play();
+          if (currentIndex == -1 && tracks.isNotEmpty) {
+             _loadTrack(0);
+             return;
+          }
+          if (player.playing) {
+            player.pause();
+          } else {
+            player.play();
+          }
+          setState(() {}); // Перерисовать кнопку
         },
+        
         onPausePressed: () {
           player.pause();
+          setState(() {});
         },
-        onNextPressed: () {
-          if (currentIndex < tracks.length - 1) {
-            _loadTrack(currentIndex + 1);
-          }
+        
+        onNextPressed: _nextTrack,
+        onPrevPressed: _prevTrack,
+        
+        // ПОЛЗУНОК ТРЕКА
+        position: position,
+        duration: duration,
+        onPositionChanged: (value) {
+          setState(() {
+            _dragPosition = value; // Запоминаем, куда тянет палец
+          });
+          player.seek(Duration(seconds: value.toInt()));
+          // Сбрасываем drag через мгновение после перехода
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _dragPosition = null;
+          });
         },
-        onPrevPressed: () {
-          if (currentIndex > 0) {
-            _loadTrack(currentIndex - 1);
-          }
-        },
-        position: player.position.inSeconds.toDouble(),
-        duration: player.duration?.inSeconds.toDouble() ?? 0.0,
-        volume: player.volume,
+        
+        // ПОЛЗУНОК ГРОМКОСТИ
+        volume: _volume,
         onVolumeChanged: (value) {
+          setState(() {
+            _volume = value; // Обновляем локально, чтобы слайдер двигался плавно
+          });
           player.setVolume(value);
         },
-        onPositionChanged: (value) {
-          player.seek(Duration(seconds: value.toInt()));
-        },
       ),
-      // Add the floating add track button
       floatingActionButton: AddTrackButton(
         onTracksAdded: _addTracks,
       ),

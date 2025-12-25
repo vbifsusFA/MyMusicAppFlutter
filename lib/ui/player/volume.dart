@@ -25,11 +25,11 @@ class VolumeControl extends StatelessWidget {
               activeTrackColor: Colors.white,
               inactiveTrackColor: Colors.grey[600],
               thumbColor: Colors.white,
-              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6.0),
-              overlayShape: RoundSliderOverlayShape(overlayRadius: 12.0),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
             ),
             child: Slider(
-              value: volume,
+              value: volume.clamp(0.0, 1.0), // Клэмпим громкость от 0 до 1
               min: 0.0,
               max: 1.0,
               onChanged: onChanged,
